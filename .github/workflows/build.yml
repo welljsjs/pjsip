@@ -34,5 +34,6 @@ jobs:
       with:
         artifacts: "libs"
         tag: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         
         
