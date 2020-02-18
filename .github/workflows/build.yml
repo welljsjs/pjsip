@@ -32,7 +32,7 @@ jobs:
       if: steps.check-tag.outputs.match == 'true'
       uses: ncipollo/release-action@v1
       with:
-        artifacts: "libs"
+        artifacts: "build/"
         tag: ${{ github.ref }}
         token: ${{ secrets.GITHUB_TOKEN }}
         
