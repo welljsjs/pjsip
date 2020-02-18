@@ -33,6 +33,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "libs"
-        tag_name: ${{ github.ref }}
+        tag: ${{ github.ref }}
         
         
