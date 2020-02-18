@@ -1,4 +1,4 @@
-name: Build
+name: CI/CD
 
 on: [push]
 
@@ -33,4 +33,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "libs"
+        tag_name: ${{ github.ref }}
+        
         
