@@ -22,6 +22,7 @@ jobs:
           if [[ ${{ github.event.ref }} =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
               echo ::set-output name=match::true
           else
+            echo "Setting match to true anyway..."
             echo ::set-output name=match::true 
           fi
     - name: Check Tag Output
@@ -35,5 +36,6 @@ jobs:
         artifacts: "build/"
         tag: ${{ github.ref }}
         token: ${{ secrets.GITHUB_TOKEN }}
+        commit: ${{ github.sha }}
         
         
