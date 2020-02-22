@@ -16,7 +16,7 @@ jobs:
         cache-name: cache-build-dir
       with: 
         path: ./build/ # Cache build dir
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('build/**') }} # No extra restore-keys, we only use the exact cache version
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('build/**') }}-cache # No extra restore-keys, we only use the exact cache version
     - name: Build pjsip universal library
       if: steps.cache-build-dir.outputs.cache-hit == 'false'
       run: ./build.sh
