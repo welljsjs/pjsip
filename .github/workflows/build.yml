@@ -9,15 +9,19 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+    - name: Cache build directory
+      id: cache_build_dir
+      uses: actions/cache@v1
+      env: 
+        cache-name: cache-build-dir
+      with: 
+        path: ./build # Cache build dir
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('./build/') }} # No extra restore-keys, we only use the exact cache version
     - name: Build pjsip universal library
-      run: |
-        ./build.sh
-        zip -r libs build/
-    #- name: Upload libraries
-     # uses: actions/upload-artifact@v1.0.0
-     # with:
-     #   name: libs
-     #   path: build/
+      if: steps.cache-build-dir.outputs.cache-hit == 'true'
+      run: ./build.sh
+    - name: Compress build directory to zip file
+      run: zip -r libs build/
     - name: Check Tag
       id: check-tag
       run: |
@@ -39,7 +43,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
       with:
         tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
     - name: Upload Release Asset
       id: upload_release_asset
       if: steps.check-tag.outputs.match == 'true'
@@ -49,7 +53,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
         asset_path: ./libs.zip
-        asset_name: libs.zip
+        asset_name: libs_compiled.zip
         asset_content_type: application/zip
 
         
