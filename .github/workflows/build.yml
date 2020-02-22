@@ -10,12 +10,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build pjsip universal library
-      run: ./build.sh
-    - name: Upload libraries
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: libs
-        path: build/
+      run: |
+        ./build.sh
+        zip -r libs build/
+    #- name: Upload libraries
+     # uses: actions/upload-artifact@v1.0.0
+     # with:
+     #   name: libs
+     #   path: build/
     - name: Check Tag
       id: check-tag
       run: |
@@ -46,9 +48,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: build/
-        asset_name: build
-        asset_content_type: application/octet-stream
+        asset_path: ./libs.zip
+        asset_name: libs.zip
+        asset_content_type: application/zip
 
         
         
