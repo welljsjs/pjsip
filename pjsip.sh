@@ -7,11 +7,6 @@ function realpath { echo $(cd $(dirname "$1"); pwd)/$(basename "$1"); }
 __FILE__=`realpath "$0"`
 __DIR__=`dirname "${__FILE__}"`
 
-# download
-function download() {
-    "${__DIR__}/download.sh" "$1" "$2" #--no-cache
-}
-
 DEVELOPER=$(xcode-select --print-path)
 
 IPHONEOS_DEPLOYMENT_VERSION=${IOS_MIN_SDK_VERSION:-"9.0"}
@@ -37,6 +32,7 @@ LIB_PATHS=("pjlib/lib" \
 
 OPENSSL_PREFIX=
 OPUS_PREFIX=
+ZRTP_PREFIX=
 while [ "$#" -gt 0 ]; do
     case $1 in
         --with-openssl)
@@ -59,6 +55,16 @@ while [ "$#" -gt 0 ]; do
                 exit 1
             fi
             ;;
+		--with-zrtp)
+			if [ "$#" -gt 1 ]; then
+				ZRTP_PREFIX=$(python -c "import os,sys; print os.path.realpath(sys.argv[1])" "$2")
+				shift 2
+				continue
+			else
+				echo 'ERROR: Must specify a non-empty "--with-zrtp PREFIX" argument.' >&2
+				exit 1
+			fi
+			;;
     esac
     shift
 done
@@ -150,6 +156,14 @@ function configure () {
 			export LDFLAGS="${LDFLAGS} -L${OPENSSL_PREFIX}/lib/macos"
 		fi
 	fi
+	if [[ ${ZRTP_PREFIX} ]]; then
+#		export CFLAGS="${CFLAGS} -I${ZRTP_PREFIX}/zsrtp/include -I${ZRTP_PREFIX}/zsrtp/zrtp \
+#		-I${ZRTP_PREFIX}/zsrtp/zrtp/zrtp -I${ZRTP_PREFIX}/zsrtp/zrtp/zrtp/libzrtpcpp \
+#		-I${ZRTP_PREFIX}/zsrtp/zrtp/srtp -I${ZRTP_PREFIX}/zsrtp/zrtp/srtp/crypto"
+#		export LDFLAGS="${LDFLAGS} -L${ZRTP_PREFIX}/lib/libzsrtp-$(TARGET_NAME)$(LIBEXT)"
+		export CFLAGS="${CFLAGS} -I${ZRTP_PREFIX}/build/zsrtp/build.mak"
+		echo "Using ZRTP..."
+	fi
 	export LDFLAGS="${LDFLAGS} -lstdc++"
 
 	# log
@@ -174,6 +188,13 @@ function build () {
 	LOG=${BASE_DIR}/${TYPE}-${ARCH}.log
 
 	configure $TYPE $ARCH $LOG
+
+	if [[ ${ZRTP_PREFIX} ]]; then
+		export PJDIR=${PJSIP_DIR}
+		echo "Building ZRTP for ${TYPE} ${ARCH}..." >> ${LOG} 2>&1
+		make -C "${ZRTP_PREFIX}/build/zsrtp" clean >> ${LOG} 2>&1
+		make -C "${ZRTP_PREFIX}/build/zsrtp" >> ${LOG} 2>&1
+	fi
 
 	echo "Building for ${TYPE} ${ARCH}..."
 	make dep >> ${LOG} 2>&1
@@ -253,9 +274,6 @@ function do_lipo() {
 		lipo ${LINE}
 	done < "${TMP}"
 }
-
-download "${PJSIP_URL}" "${PJSIP_DIR}"
-
 
 build "i386" "${IPHONESIMULATOR_SDK}" "ios"
 build "x86_64" "${IPHONESIMULATOR_SDK}" "ios"
