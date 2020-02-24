@@ -47,11 +47,11 @@ echo_help()
   echo "     --ec-nistp-64-gcc-128         Enable configure option enable-ec_nistp_64_gcc_128 for 64 bit builds"
   echo " -h, --help                        Print help (this message)"
   echo "     --macos-sdk=SDKVERSION        Override macOS SDK version"
-  echo "	   --macos-min-sdk=SDKVERSION	 Override macOS minimum SDK version"
+  echo "	   --macos-min-sdk=SDKVERSION	   Override macOS minimum SDK version"
   echo "     --ios-sdk=SDKVERSION          Override iOS SDK version"
-  echo "	   --ios-min-sdk=SDKVERSION	 	 Override iOS minimum SDK version"
+  echo "	   --ios-min-sdk=SDKVERSION	 	   Override iOS minimum SDK version"
   echo "     --noparallel                  Disable running make with parallel jobs (make -j)"
-  echo "	   --reporoot					 Specify repository root directory of openssl"
+  echo "	   --reporoot					           Specify repository root directory of openssl"
   echo "     --tvos-sdk=SDKVERSION         Override tvOS SDK version"
   echo "     --disable-bitcode             Disable embedding Bitcode"
   echo " -v, --verbose                     Enable verbose logging"
@@ -562,7 +562,7 @@ if [ ${#OPENSSLCONF_ALL[@]} -gt 1 ]; then
   # Prepare intermediate header file
   # This overwrites opensslconf.h that was copied from $INCLUDE_DIR
   OPENSSLCONF_INTERMEDIATE="${CURRENTPATH}/include/openssl/opensslconf.h"
-  cp "${CURRENTPATH}/include/opensslconf-template.h" "${OPENSSLCONF_INTERMEDIATE}"
+  cp "${CURRENTPATH}/include/openssl/opensslconf-template.h" "${OPENSSLCONF_INTERMEDIATE}"
 
   # Loop all header files
   LOOPCOUNT=0
