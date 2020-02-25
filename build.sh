@@ -1,79 +1,152 @@
 #!/bin/sh
 
-# environment variables
-export OPENSSL_VERSION="1.1.1c" # specify the openssl version to use
-export PJSIP_VERSION="2.10"
-export OPUS_VERSION="1.3.1"
-export MACOS_MIN_SDK_VERSION="10.12"
-export IOS_MIN_SDK_VERSION="9.0"
-export ZRTP4PJ_SOURCE="https://github.com/welljsjs/ZRTP4PJ" # specify the zrtp4pj source
-export ZRTP_SOURCE="https://github.com/welljsjs/ZRTPCPP" # specify the zrtp source
+# This script has to be run from the root of the (custom)
+# pjproject (pjsip) repo (pjsip for Apple platforms)
+
+# Environment Variables
+OPENSSL_VERSION="1.1.1c"
+PJSIP_VERSION="2.10"
+OPUS_VERSION="1.3.1"
+MACOS_MIN_SDK_VERSION="10.13"
+IOS_MIN_SDK_VERSION="9.0"
+
+# This script is non-interactive - the only way to specify custom parameters
+# is via environment variables.
+# There might be a future version of this script that supports an "-i" (interactive)
+# option to provide a CLI.
+# Not yet implemented.
+
+# The compiled libraries will have the following directory structure:
+# - /lib/
+#       - [dependency]/
+#           - [version]/
+#               - iOS/
+#                   - [lib-name].a
+#               - macOS/
+#                   - [lib-name].a
+# This way, we can upgrade to a newer version of a dependency but still keep
+# the old ones in place in case the upgrade has some unwanted side-effects.
 
 # see http://stackoverflow.com/a/3915420/318790
-function realpath { echo $(cd $(dirname "$1"); pwd)/$(basename "$1"); }
-__FILE__=`realpath "$0"`
-__DIR__=`dirname "${__FILE__}"`
+function realpath() { echo $(
+    cd $(dirname "$1")
+    pwd
+)/$(basename "$1"); }
 
+# Important globals
+__FILE__=$(realpath "$0")
+__DIR__=$(dirname "${__FILE__}")
+LIB_DIR="${__DIR__}/lib" # This is where we copy the libraries to once they are compiled.
 BUILD_DIR="${__DIR__}/build"
-if [ ! -d ${BUILD_DIR} ]; then
-    mkdir ${BUILD_DIR}
-fi
+OPENSSL_BUILD_DIR="${BUILD_DIR}/openssl"
+OPUS_BUILD_DIR="${BUILD_DIR}/opus"
+ZRTP_BUILD_DIR="${BUILD_DIR}/zrtp4pj"
+PJSIP_BUILD_DIR="${BUILD_DIR}/pjproject"
+OPENSSL_LIB_DIR="${LIB_DIR}/openssl/${OPENSSL_VERSION}"
+OPUS_LIB_DIR="${LIB_DIR}/opus/${OPUS_VERSION}"
+ZRTP_LIB_DIR="${LIB_DIR}/zrtp4pj"
+PJSIP_LIB_DIR="${LIB_DIR}/pjsip/${PJSIP_VERSION}"
+OPENSSL_BUILD_SCRIPT="${__DIR__}/openssl/openssl.sh"
+OPUS_BUILD_SCRIPT="${__DIR__}/opus.sh"
+ZRTP_BUILD_SCRIPT="${__DIR__}/zsrtp.sh"
+PJSIP_BUILD_SCRIPT="${__DIR__}/pjsip.sh"
 
-# download
-function download() {
-    "${__DIR__}/download.sh" "$1" "$2" #--no-cache
-}
-
-# openssl
-OPENSSL_DIR="${BUILD_DIR}/openssl"
-OPENSSL_ENABLED=
 function openssl() {
-    if [ ! -d "${OPENSSL_DIR}/lib/iOS" ] || [ ! -d "${OPENSSL_DIR}/lib/macOS" ]; then
-        if [ ! -d "${OPENSSL_DIR}" ]; then
-            mkdir -p "${OPENSSL_DIR}"
-        fi
-        "${__DIR__}/openssl/openssl.sh" "--version=${OPENSSL_VERSION}" "--reporoot=${OPENSSL_DIR}" "--macos-min-sdk=${MACOS_MIN_SDK_VERSION}" "--ios-min-sdk=${IOS_MIN_SDK_VERSION}"
+    # If there are no libs or the specific version is not present, create the directory for that version.
+    if [ ! -d "${OPENSSL_LIB_DIR}" ]; then
+        mkdir -p "${OPENSSL_LIB_DIR}"
+
+        echo "OpenSSL libs for specified version does not exist - building OpenSSL ${OPENSSL_VERSION} ..."
+
+        "${OPENSSL_BUILD_SCRIPT}" "--version=${OPENSSL_VERSION}" "--reporoot=${OPENSSL_BUILD_DIR}"
+
+        cp -r "${OPENSSL_BUILD_DIR}/lib" "${OPENSSL_LIB_DIR}/"
+        cp -r "${OPENSSL_BUILD_DIR}/include" "${OPENSSL_LIB_DIR}/"
+
+        echo "Finished building OpenSSL"
     else
-        echo "Using OpenSSL..."
+        echo "OpenSSL libs for the specified version exist - NOT rebuilding OpenSSL (delete specific version [${OPENSSL_LIB_DIR}] to force a rebuild)"
     fi
-    
-    OPENSSL_ENABLED=1
 }
 
-# opus
-OPUS_DIR="${BUILD_DIR}/opus"
-OPUS_ENABLED=
 function opus() {
-    if [ ! -f "${OPUS_DIR}/dependencies/lib/libopus.a" ] || [ ! -d "${OPUS_DIR}/dependencies/include/opus/" ]; then
-        "${__DIR__}/opus.sh" "${OPUS_DIR}"
+    # If there are no libs or the specific version is not present, create the directory for that version.
+    if [ ! -d "${OPUS_LIB_DIR}" ]; then
+        mkdir -p "${OPUS_LIB_DIR}"
+
+        echo "Opus libs for specified version does not exist - building Opus ${OPUS_VERSION} ..."
+
+        "${OPUS_BUILD_SCRIPT}" "${OPUS_BUILD_DIR}"
+
+        cp -r "${OPUS_BUILD_DIR}/dependencies/"* "${OPUS_LIB_DIR}/"
+
+        echo "Finished building Opus"
     else
-        echo "Using OPUS..."
+        echo "Opus libs for the specified version exist - NOT rebuilding Opus (delete specific version [${OPUS_LIB_DIR}] to force a rebuild)"
     fi
-    
-    OPUS_ENABLED=1
 }
 
-# zrtp
-ZRTP_DIR="${BUILD_DIR}/zrtp4pj"
-ZRTP_ENABLED=
 function zrtp() {
-	"${__DIR__}/zsrtp.sh" "${ZRTP_DIR}"
-	echo "Using ZRTP..."
+    # If there are no libs or the specific version is not present, create the directory for that version.
+    if [ ! -d "${ZRTP_LIB_DIR}" ]; then
+        mkdir -p "${ZRTP_LIB_DIR}"
 
-	ZRTP_ENABLED=1
+        echo "ZRTP libs for specified version does not exist - building ZRTP ..."
+
+        "${ZRTP_BUILD_SCRIPT}" "${ZRTP_BUILD_DIR}"
+
+        cp -r "${ZRTP_BUILD_DIR}/lib" "${ZRTP_LIB_DIR}/"
+        cp -r "${ZRTP_BUILD_DIR}/zsrtp/include" "${ZRTP_LIB_DIR}/"
+        cp "${ZRTP_BUILD_DIR}/zsrtp/zrtp/zrtp/libzrtpcpp/ZrtpCWrapper.h" "${ZRTP_LIB_DIR}/include/"
+        # cp "${ZRTP_BUILD_DIR}/zsrtp/build.mak" "${ZRTP_LIB_DIR}/"
+
+        echo "Finished building ZRTP"
+    else
+        echo "ZRTP libs for the specified version exist - NOT rebuilding ZRTP (delete specific version [${ZRTP_LIB_DIR}] to force a rebuild)"
+    fi
 }
 
-# pjsip
-PJSIP_DIR="${BUILD_DIR}/pjproject"
-PJSIP_URL="http://www.pjsip.org/release/${PJSIP_VERSION:-2.9}/pjproject-${PJSIP_VERSION:-2.9}.tar.bz2"
 function pjsip() {
-	"${__DIR__}/pjsip.sh" "${PJSIP_DIR}" --with-openssl "${OPENSSL_DIR}" --with-opus "${OPUS_DIR}/dependencies" --with-zrtp "${ZRTP_DIR}"
-}
+    # If there are no libs or the specific version is not present, create the directory for that version.
+    if [ ! -d "${PJSIP_LIB_DIR}" ]; then
+        mkdir -p "${PJSIP_LIB_DIR}"
 
-# First, download (and unpack) pjsip.
-# This is a change and useful because following scripts are therefore able to modify
-# the content of pjsip, e.g. adding custom third-party libraries.
-download "${PJSIP_URL}" "${PJSIP_DIR}/src"
+        echo "PJSIP libs for specified version does not exist - building PJSIP ${PJSIP_VERSION} ..."
+
+        "${PJSIP_BUILD_SCRIPT}" "${PJSIP_BUILD_DIR}" --with-openssl "${OPENSSL_LIB_DIR}" --with-opus "${OPUS_LIB_DIR}" --with-zrtp "${ZRTP_BUILD_DIR}"
+
+        # Create subdirectories for pjsip modules
+        mkdir -p "${PJSIP_LIB_DIR}/pjlib"
+        mkdir -p "${PJSIP_LIB_DIR}/pjlib-util"
+        mkdir -p "${PJSIP_LIB_DIR}/pjmedia"
+        mkdir -p "${PJSIP_LIB_DIR}/pjnath"
+        mkdir -p "${PJSIP_LIB_DIR}/pjsip"
+        mkdir -p "${PJSIP_LIB_DIR}/third_party"
+
+        # Copy modules (libraries and headers)
+        cp -r "${PJSIP_BUILD_DIR}/src/pjlib/lib" "${PJSIP_LIB_DIR}/pjlib/"
+        cp -r "${PJSIP_BUILD_DIR}/src/pjlib/include" "${PJSIP_LIB_DIR}/pjlib/"
+
+        cp -r "${PJSIP_BUILD_DIR}/src/pjlib-util/lib" "${PJSIP_LIB_DIR}/pjlib-util/"
+        cp -r "${PJSIP_BUILD_DIR}/src/pjlib-util/include" "${PJSIP_LIB_DIR}/pjlib-util/"
+
+        cp -r "${PJSIP_BUILD_DIR}/src/pjmedia/lib" "${PJSIP_LIB_DIR}/pjmedia/"
+        cp -r "${PJSIP_BUILD_DIR}/src/pjmedia/include" "${PJSIP_LIB_DIR}/pjmedia/"
+
+        cp -r "${PJSIP_BUILD_DIR}/src/pjnath/lib" "${PJSIP_LIB_DIR}/pjnath/"
+        cp -r "${PJSIP_BUILD_DIR}/src/pjnath/include" "${PJSIP_LIB_DIR}/pjnath/"
+
+        cp -r "${PJSIP_BUILD_DIR}/src/pjsip/lib" "${PJSIP_LIB_DIR}/pjsip/"
+        cp -r "${PJSIP_BUILD_DIR}/src/pjsip/include" "${PJSIP_LIB_DIR}/pjsip/"
+
+        cp -r "${PJSIP_BUILD_DIR}/src/third_party/lib" "${PJSIP_LIB_DIR}/third_party/"
+        # cp -r "${PJSIP_BUILD_DIR}/src/third_party/include" "${PJSIP_LIB_DIR}/third_party/"
+
+        echo "Finished building PJSIP"
+    else
+        echo "PJSIP libs for the specified version exist - NOT rebuilding PJSIP (delete specific version [${PJSIP_LIB_DIR}] to force a rebuild)"
+    fi
+}
 
 openssl
 opus
