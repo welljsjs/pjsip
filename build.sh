@@ -97,7 +97,7 @@ function zrtp() {
 
         cp -r "${ZRTP_BUILD_DIR}/lib" "${ZRTP_LIB_DIR}/"
         cp -r "${ZRTP_BUILD_DIR}/zsrtp/include" "${ZRTP_LIB_DIR}/"
-        cp "${ZRTP_BUILD_DIR}/zsrtp/zrtp/zrtp/libzrtpcpp/ZrtpCWrapper.h" "${ZRTP_LIB_DIR}/include/"
+        cp -r "${ZRTP_BUILD_DIR}/zsrtp/zrtp/zrtp/libzrtpcpp" "${ZRTP_LIB_DIR}/include/"
         # cp "${ZRTP_BUILD_DIR}/zsrtp/build.mak" "${ZRTP_LIB_DIR}/"
 
         echo "Finished building ZRTP"
